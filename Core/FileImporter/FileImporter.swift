@@ -112,7 +112,7 @@ public struct ExcelFileImporter: FileImporting {
         }
 
         do {
-            guard let sharedStrings = try file.parseSharedStrings() else { return <#default value#> }
+            let sharedStrings = try file.parseSharedStrings()
             let workbooks = try file.parseWorkbooks()
             guard !workbooks.isEmpty else {
                 throw FileImportError.emptyWorkbook
@@ -129,7 +129,7 @@ public struct ExcelFileImporter: FileImporting {
                     for row in rows {
                         var values: [String] = []
                         for cell in row.cells {
-                            if let stringValue = cell.stringValue(sharedStrings) {
+                            if let sharedStrings, let stringValue = cell.stringValue(sharedStrings) {
                                 hasReadableCell = true
                                 values.append(stringValue)
                             } else if let rawValue = cell.value {
