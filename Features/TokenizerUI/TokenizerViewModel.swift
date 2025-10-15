@@ -41,7 +41,7 @@ final class TokenizerViewModel: ObservableObject {
     /// 用户输入文本，与界面左侧输入框双向绑定。
     @Published var inputText: String {
         didSet {
-            processInput()
+            scheduleTokenization(for: inputText, debounce: true)
         }
     }
 
@@ -82,9 +82,13 @@ final class TokenizerViewModel: ObservableObject {
     private let fileImportService: FileImportService
     private let exportService: TokenExportService
     private let searchQueue = DispatchQueue(label: "com.macos-tokenizer.search", qos: .userInitiated)
+    private let tokenizationQueue = DispatchQueue(label: "com.macos-tokenizer.tokenization", qos: .userInitiated)
     private var searchWorkItem: DispatchWorkItem?
+    private var tokenizationWorkItem: DispatchWorkItem?
     private var normalizedSearchQuery: String = ""
     private let supportedExtensions: Set<String> = ["txt", "xlsx"]
+    private let tokenizationDebounceInterval: TimeInterval = 0.15
+    private var tokenizationJobID = UUID()
 
     /// 当前匹配到的 token 索引集合，用于驱动列表高亮。
     @Published private(set) var matchedTokenIndices: Set<Int> = []
@@ -100,17 +104,68 @@ final class TokenizerViewModel: ObservableObject {
         self.fileImportService = fileImportService
         self.exportService = exportService
         self.inputText = initialText
-        processInput()
+        scheduleTokenization(for: initialText, debounce: false)
     }
 
-    private func processInput() {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        let result = engine.tokenize(inputText)
-        processingDuration = CFAbsoluteTimeGetCurrent() - startTime
-        tokens = result
-        totalTokenCount = result.count
-        uniqueTokenCount = Set(result).count
-        tokenFrequencies = buildFrequencyMap(from: result)
+    deinit {
+        tokenizationWorkItem?.cancel()
+        searchWorkItem?.cancel()
+    }
+
+    private func scheduleTokenization(for text: String, debounce: Bool) {
+        tokenizationWorkItem?.cancel()
+        tokenizationJobID = UUID()
+
+        guard !text.isEmpty else {
+            tokenizationWorkItem = nil
+            applyTokenizationResult(
+                tokens: [],
+                uniqueCount: 0,
+                frequencyMap: [:],
+                duration: 0
+            )
+            return
+        }
+
+        let jobID = tokenizationJobID
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            guard self.tokenizationJobID == jobID else { return }
+
+            let startTime = CFAbsoluteTimeGetCurrent()
+            let result = self.engine.tokenize(text)
+
+            guard self.tokenizationJobID == jobID else { return }
+
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+            let frequencyMap = self.buildFrequencyMap(from: result)
+            let uniqueCount = frequencyMap.count
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                guard self.tokenizationJobID == jobID else { return }
+                self.applyTokenizationResult(
+                    tokens: result,
+                    uniqueCount: uniqueCount,
+                    frequencyMap: frequencyMap,
+                    duration: duration
+                )
+                self.tokenizationWorkItem = nil
+            }
+        }
+
+        tokenizationWorkItem = workItem
+        let delay = debounce ? tokenizationDebounceInterval : 0
+        tokenizationQueue.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    @MainActor
+    private func applyTokenizationResult(tokens: [String], uniqueCount: Int, frequencyMap: [String: Int], duration: TimeInterval) {
+        processingDuration = duration
+        self.tokens = tokens
+        totalTokenCount = tokens.count
+        uniqueTokenCount = uniqueCount
+        tokenFrequencies = frequencyMap
         refreshSearchResultsForCurrentQuery()
     }
 
