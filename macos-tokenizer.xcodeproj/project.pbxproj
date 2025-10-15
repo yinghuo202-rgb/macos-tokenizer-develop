@@ -444,7 +444,7 @@ SWIFT_VERSION = 5.9;
 };
 name = Debug;
 };
-B4F5C1C92B3ED4F600A67135 /* Release */ = {
+    SWIFT_VERSION = 5.9;
 isa = XCBuildConfiguration;
 buildSettings = {
 CODE_SIGN_STYLE = Automatic;
@@ -466,7 +466,7 @@ SWIFT_VERSION = 5.9;
 };
 name = Release;
 };
-B4F5C1CC2B3ED4F600A67135 /* Debug */ = {
+    SWIFT_VERSION = 5.9;
 isa = XCBuildConfiguration;
 buildSettings = {
 ALWAYS_SEARCH_USER_PATHS = NO;
@@ -593,7 +593,7 @@ B925708ED47A40B28F6DE3A4 /* Debug */ = {
         TEST_HOST = "$(BUNDLE_LOADER)";
     };
     name = Debug;
-};
+        SWIFT_VERSION = 5.9;
 B7F0188A227F4AEF81D2AF18 /* Release */ = {
     isa = XCBuildConfiguration;
     buildSettings = {
@@ -614,7 +614,7 @@ B7F0188A227F4AEF81D2AF18 /* Release */ = {
         TEST_HOST = "$(BUNDLE_LOADER)";
     };
     name = Release;
-};
+        SWIFT_VERSION = 5.9;
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */

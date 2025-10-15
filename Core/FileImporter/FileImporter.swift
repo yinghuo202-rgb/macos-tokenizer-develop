@@ -112,7 +112,8 @@ public struct ExcelFileImporter: FileImporting {
         }
 
         do {
-            let sharedStrings = try file.parseSharedStrings()
+            // sharedStrings may be absent in some XLSX files; parse safely as optional
+            let sharedStrings = try? file.parseSharedStrings()
             let workbooks = try file.parseWorkbooks()
             guard !workbooks.isEmpty else {
                 throw FileImportError.emptyWorkbook
